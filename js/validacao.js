@@ -51,11 +51,22 @@ const mensagensDeErro = {
     cep: {
         valueMissing: "O campo CEP não pode estar vazio",
         patternMismatch: "O CEP digitado não é válido",
+        customError: "Não foi possível buscar o CEP",
+    },
+    logradouro: {
+        valueMissing: "O campo logradouro não pode estar vazio",
+    },
+    cidade: {
+        valueMissing: "O campo cidade não pode estar vazio",
+    },
+    estado: {
+        valueMissing: "O campo estado não pode estar vazio",
     },
 };
 const validadores = {
     dataNascimento: (input) => validaDataNascimento(input),
     cpf: (input) => validaCPF(input),
+    cep: (input) => recuperarCEP(input),
 };
 
 function mostraMensagemDeErro(tipoDeInput, input) {
@@ -177,4 +188,44 @@ function checaDigitoVerificador(cpf, multiplicador) {
 
 function confirmaDigito(soma) {
     return 11 - (soma % 11);
+}
+
+function recuperarCEP(input) {
+    const cep = input.value.replace(/\D/g, ""); //remove todos os caracteres que não são números
+    const url = `https://viacep.com.br/ws/${cep}/json/`; //url da api do viacep
+
+    if (cep != "") {
+        const options = {
+            method: "GET", // método da requisição
+            mode: "cors", // modo de requisição
+            headers: {
+                "Content-Type": "application/json;charset=utf-8", // tipo de conteúdo da requisição
+            },
+        };
+
+        if ((!input.validity.patternMismatch && input, validity.valueMissing)) {
+            fetch(url, options)
+                .then((response) => response.json())
+                .then((data) => {
+                    //pega os dados da requisição
+                    if (data.erro) {
+                        input.setCustomValidity("CEP não encontrado"); //se o cep não for encontrado, seta a mensagem de erro
+                        return;
+                    }
+                    input.setCustomValidity("");
+                    preencheCamposComCEP(data);
+                    return;
+                });
+        }
+    }
+}
+
+function preencheCamposComCEP(data) {
+    const logradouro = document.querySelector('[data-tipo="logradouro"]');
+    const cidade = document.querySelector('[data-tipo="cidade"]');
+    const estado = document.querySelector('[data-tipo="estado"]');
+
+    logradouro.value = data.logradouro; //preenche o campo logradouro com o dado recebido da requisição
+    cidade.value = data.localidade; //preenche o campo cidade com o dado recebido da requisição
+    estado.value = data.uf; //preenche o campo estado com o dado recebido da requisição
 }
