@@ -44,9 +44,18 @@ const mensagensDeErro = {
         typeMismatch: "A data digitada não é válida",
         customError: "Você deve ter mais de 18 anos",
     },
+    cpf: {
+        valueMissing: "O campo CPF não pode estar vazio",
+        customError: "O CPF digitado não é válido",
+    },
+    cep: {
+        valueMissing: "O campo CEP não pode estar vazio",
+        patternMismatch: "O CEP digitado não é válido",
+    },
 };
 const validadores = {
     dataNascimento: (input) => validaDataNascimento(input),
+    cpf: (input) => validaCPF(input),
 };
 
 function mostraMensagemDeErro(tipoDeInput, input) {
@@ -79,15 +88,10 @@ function mostraMensagemDeErro(tipoDeInput, input) {
 
 function validaDataNascimento(input) {
     const dataRecebida = new Date(input.value);
-    maiorQue18(dataRecebida);
     let mensagem = "";
 
-    if (input.value == "") {
-        mensagem = "Informe a data de nascimento";
-    } else if (isNaN(dataRecebida)) {
-        mensagem = "Data inválida";
-    } else if (!maiorQue18(dataRecebida)) {
-        mensagem = "Você deve ter mais de 18 anos";
+    if (!maiorQue18(dataRecebida)) {
+        mensagem = "Você deve ser maior que 18 anos para se cadastrar.";
     }
 
     input.setCustomValidity(mensagem); //seta a mensagem de erro
@@ -95,7 +99,82 @@ function validaDataNascimento(input) {
 
 function maiorQue18(data) {
     const dataAtual = new Date(); //data de hoje
-    const dataMais18 = new Date(data.setFullYear(data.getFullYear() + 18)); //data de hoje + 18 anos
+    const dataMais18 = new Date(
+        data.getUTCFullYear() + 18,
+        data.getUTCMonth(),
+        data.getUTCDate()
+    );
 
     return dataMais18 <= dataAtual; //retorna true se a data de hoje + 18 anos for menor ou igual a data de hoje
+}
+
+function validaCPF(input) {
+    const cpfFormatado = input.value.replace(/\D/g, ""); //remove todos os caracteres que não são números
+    let mensagem = "";
+
+    if (!checaCPFRepetido(cpfFormatado) || !checaEstruturaCPF(cpfFormatado)) {
+        //verifica se o cpf é válido
+        mensagem = "CPF inválido";
+    }
+
+    input.setCustomValidity(mensagem); //seta a mensagem de erro
+}
+
+function checaCPFRepetido(cpf) {
+    //função que verifica se o cpf é válido
+    const valoresRepetidos = [
+        "00000000000",
+        "11111111111",
+        "22222222222",
+        "33333333333",
+        "44444444444",
+        "55555555555",
+        "66666666666",
+        "77777777777",
+        "88888888888",
+        "99999999999",
+    ]; //array com os cpfs inválidos
+
+    let cpfValido = true;
+
+    valoresRepetidos.forEach((valorRepetido) => {
+        // percorre o array valoresRepetidos
+        if (valorRepetido == cpf) {
+            //verifica se o cpf recebido é igual a algum valor do array cpfsInvalidos
+            cpfValido = false; //se for igual, seta a variável cpfValido como false
+        }
+    });
+
+    return cpfValido; //retorna true se o cpf for válido e false se o cpf for inválido
+}
+
+function checaEstruturaCPF(cpf) {
+    const multiplicador = 10;
+    const multiplicador2 = 11;
+
+    return checaDigitoVerificador(cpf, multiplicador);
+}
+
+function checaDigitoVerificador(cpf, multiplicador) {
+    if (multiplicador >= 12) {
+        return true; //se o multiplicador for maior ou igual a 12, retorna true
+    }
+    let multiplicadorInicial = multiplicador;
+    let soma = 0;
+    const cpfSemDigitos = cpf.substr(0, multiplicador - 1).split(""); //pega os 9 primeiros digitos do cpf
+    const digitoVerificador = cpf.charAt(multiplicador - 1); //pega o primeiro digito verificador
+
+    for (let contador = 0; multiplicadorInicial > 1; multiplicadorInicial--) {
+        soma += cpfSemDigitos[contador] * multiplicadorInicial;
+        contador++;
+    }
+
+    if (digitoVerificador == confirmaDigito(soma)) {
+        return checaDigitoVerificador(cpf, multiplicador + 1); //se for igual, chama a função novamente para verificar o segundo digito verificador
+    }
+    return false;
+}
+
+function confirmaDigito(soma) {
+    return 11 - (soma % 11);
 }
